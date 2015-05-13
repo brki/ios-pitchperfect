@@ -21,32 +21,52 @@
                                 <state key="normal" image="Microphone">
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
+                                <connections>
+                                    <action selector="recordAudio:" destination="vXZ-lx-hvc" eventType="touchUpInside" id="NxV-Tb-EDZ"/>
+                                </connections>
                             </button>
+                            <label hidden="YES" opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Recording" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Eub-vQ-ofP">
+                                <rect key="frame" x="0.0" y="-21" width="42" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="0.86780427631578949" green="0.22846422697368421" blue="0.19497841282894737" alpha="1" colorSpace="calibratedRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="calibratedWhite"/>
                         <constraints>
                             <constraint firstAttribute="centerX" secondItem="l6v-OH-jgE" secondAttribute="centerX" id="IfA-6E-EgF"/>
+                            <constraint firstItem="Eub-vQ-ofP" firstAttribute="top" secondItem="l6v-OH-jgE" secondAttribute="bottom" constant="8" id="YzV-2I-csn"/>
                             <constraint firstAttribute="centerY" secondItem="l6v-OH-jgE" secondAttribute="centerY" id="uhx-5W-yy2"/>
+                            <constraint firstItem="l6v-OH-jgE" firstAttribute="centerX" secondItem="Eub-vQ-ofP" secondAttribute="centerX" constant="-10.5" id="v2Y-Q6-U1c"/>
                         </constraints>
                         <variation key="default">
                             <mask key="subviews">
                                 <exclude reference="l6v-OH-jgE"/>
+                                <exclude reference="Eub-vQ-ofP"/>
                             </mask>
                             <mask key="constraints">
+                                <exclude reference="YzV-2I-csn"/>
                                 <exclude reference="IfA-6E-EgF"/>
                                 <exclude reference="uhx-5W-yy2"/>
+                                <exclude reference="v2Y-Q6-U1c"/>
                             </mask>
                         </variation>
                         <variation key="widthClass=compact">
                             <mask key="subviews">
                                 <include reference="l6v-OH-jgE"/>
+                                <include reference="Eub-vQ-ofP"/>
                             </mask>
                             <mask key="constraints">
+                                <include reference="YzV-2I-csn"/>
                                 <include reference="IfA-6E-EgF"/>
                                 <include reference="uhx-5W-yy2"/>
+                                <include reference="v2Y-Q6-U1c"/>
                             </mask>
                         </variation>
                     </view>
+                    <connections>
+                        <outlet property="recordingLabel" destination="Eub-vQ-ofP" id="uDS-4w-JvQ"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="x5A-6p-PRh" sceneMemberID="firstResponder"/>
             </objects>
