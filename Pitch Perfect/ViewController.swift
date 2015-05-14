@@ -11,6 +11,9 @@ import UIKit
 class ViewController: UIViewController {
 
     @IBOutlet weak var recordingLabel: UILabel!
+    @IBOutlet weak var stopRecordingButton: UIButton!
+    
+    var isRecording = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,10 +26,20 @@ class ViewController: UIViewController {
     }
 
     @IBAction func recordAudio(sender: UIButton) {
-        //TODO: record audio
-        println("in recordAudio")
-        recordingLabel.hidden = !recordingLabel.hidden
+        if !isRecording {
+            //TODO: record audio
+            println("in recordAudio")
+            isRecording = true
+            recordingLabel.hidden = false
+            stopRecordingButton.hidden = false
+        }
     }
 
+    @IBAction func stopRecording(sender: UIButton) {
+        //TODO: stop audio recording
+        recordingLabel.hidden = true
+        stopRecordingButton.hidden = true
+        isRecording = false
+    }
 }
 
