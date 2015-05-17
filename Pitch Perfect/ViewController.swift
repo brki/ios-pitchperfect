@@ -10,14 +10,20 @@ import UIKit
 
 class ViewController: UIViewController {
 
+    @IBOutlet weak var microphone: UIButton!
     @IBOutlet weak var recordingLabel: UILabel!
-    @IBOutlet weak var stopRecordingButton: UIButton!
+    @IBOutlet weak var stopButton: UIButton!
     
     var isRecording = false
     
     override func viewDidLoad() {
+        println("viewDidLoad")
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+    }
+    
+    override func viewWillAppear(animated: Bool) {
+        adjustDisplayForRecordingStatus()
     }
 
     override func didReceiveMemoryWarning() {
@@ -26,20 +32,22 @@ class ViewController: UIViewController {
     }
 
     @IBAction func recordAudio(sender: UIButton) {
-        if !isRecording {
-            //TODO: record audio
-            println("in recordAudio")
-            isRecording = true
-            recordingLabel.hidden = false
-            stopRecordingButton.hidden = false
-        }
+        //TODO: record audio
+        println("in recordAudio")
+        isRecording = true
+        adjustDisplayForRecordingStatus()
     }
 
     @IBAction func stopRecording(sender: UIButton) {
         //TODO: stop audio recording
-        recordingLabel.hidden = true
-        stopRecordingButton.hidden = true
         isRecording = false
+        adjustDisplayForRecordingStatus()
+    }
+    
+    func adjustDisplayForRecordingStatus() {
+        microphone.enabled = !isRecording
+        recordingLabel.hidden = !isRecording
+        stopButton.hidden = !isRecording
     }
 }
 
