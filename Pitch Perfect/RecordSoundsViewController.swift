@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 truckin'. All rights reserved.
 //
 
+import AVFoundation
 import UIKit
 
 class RecordSoundsViewController: UIViewController {
@@ -15,6 +16,7 @@ class RecordSoundsViewController: UIViewController {
     @IBOutlet weak var stopButton: UIButton!
     
     var isRecording = false
+    var audioRecorder:AVAudioRecorder!
     
     override func viewDidLoad() {
         println("viewDidLoad")
@@ -25,29 +27,60 @@ class RecordSoundsViewController: UIViewController {
     override func viewWillAppear(animated: Bool) {
         adjustDisplayForRecordingStatus()
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
 
     @IBAction func recordAudio(sender: UIButton) {
-        //TODO: record audio
-        println("in recordAudio")
+        var session = AVAudioSession.sharedInstance()
+        session.setCategory(AVAudioSessionCategoryPlayAndRecord, error: nil)
+        
+        let filePath = timeStampFilePath()
+        
+        if filePath == nil {
+            println("Error: timeStampFilePath() did not return a valid file URL")
+            return
+        }
+        audioRecorder = AVAudioRecorder(URL: filePath!, settings: nil, error: nil)
+        audioRecorder.meteringEnabled = true
+        audioRecorder.prepareToRecord()
+        audioRecorder.record()
+        
         isRecording = true
         adjustDisplayForRecordingStatus()
     }
 
     @IBAction func stopRecording(sender: UIButton) {
-        //TODO: stop audio recording
+        audioRecorder.stop()
+        var audioSession = AVAudioSession.sharedInstance()
+        audioSession.setActive(false, error: nil)
+        
         isRecording = false
         adjustDisplayForRecordingStatus()
+        
     }
     
     func adjustDisplayForRecordingStatus() {
         microphone.enabled = !isRecording
         recordingLabel.hidden = !isRecording
         stopButton.hidden = !isRecording
+    }
+    
+    // Get a file URL for a file in the Document directory.
+    // The file name is the current timestamp with millisecond precision, with suffix .wav.
+    func timeStampFilePath() -> NSURL? {
+        let dirPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String
+        
+        let currentDateTime = NSDate()
+        let formatter = NSDateFormatter()
+        formatter.dateFormat = "ddMMyyyy-HHmmss.SSS"
+        let recordingName = formatter.stringFromDate(currentDateTime)+".wav"
+        let pathArray = [dirPath, recordingName]
+        let filePath = NSURL.fileURLWithPathComponents(pathArray)
+        println(filePath)
+        return filePath
     }
 }
 
