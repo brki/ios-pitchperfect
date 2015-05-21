@@ -15,15 +15,13 @@ class PlaySoundsViewController: UIViewController {
     @IBOutlet weak var stopPlayButton: UIButton!
     
     var audioPlayer: AVAudioPlayer?
+    var receivedAudio: RecordedAudio!
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let url = NSURL.fileURLWithPath(
-            NSBundle.mainBundle().pathForResource(
-                "movie_quote", ofType: "mp3")!)
         var createError: NSError?
-        audioPlayer = AVAudioPlayer(contentsOfURL: url, error: &createError)
+        audioPlayer = AVAudioPlayer(contentsOfURL: receivedAudio.filePathUrl, error: &createError)
         if let error = createError {
             println("Error: \(error.localizedDescription)")
         } else {
