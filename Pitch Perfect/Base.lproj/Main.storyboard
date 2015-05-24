@@ -63,9 +63,20 @@
                                             <action selector="playSlowSound:" destination="yXg-7A-QXK" eventType="touchUpInside" id="rvG-mk-gV7"/>
                                         </connections>
                                     </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="57t-oF-7oO" userLabel="Chipmunk button">
+                                        <rect key="frame" x="0.0" y="210" width="100" height="100"/>
+                                        <state key="normal" image="Chipmunk button">
+                                            <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                        </state>
+                                        <connections>
+                                            <action selector="playChipmunkAudio:" destination="yXg-7A-QXK" eventType="touchUpInside" id="rmv-Zl-ufy"/>
+                                        </connections>
+                                    </button>
                                 </subviews>
                                 <constraints>
+                                    <constraint firstItem="57t-oF-7oO" firstAttribute="top" secondItem="2St-Ce-566" secondAttribute="bottom" constant="60" id="GXU-R2-Om6"/>
                                     <constraint firstAttribute="centerX" secondItem="2St-Ce-566" secondAttribute="centerX" id="Ztt-df-Dw5"/>
+                                    <constraint firstAttribute="centerX" secondItem="57t-oF-7oO" secondAttribute="centerX" id="bpa-8h-L7G"/>
                                     <constraint firstAttribute="width" constant="100" id="dAO-mp-gwg"/>
                                     <constraint firstItem="2St-Ce-566" firstAttribute="top" secondItem="bKz-Sj-UEA" secondAttribute="top" constant="50" id="nRo-Bn-8ii"/>
                                 </constraints>
@@ -85,9 +96,20 @@
                                             <action selector="playFastSound:" destination="yXg-7A-QXK" eventType="touchUpInside" id="yWh-Ac-rfL"/>
                                         </connections>
                                     </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="bhk-xA-gqH" userLabel="Darth Vader button">
+                                        <rect key="frame" x="0.0" y="210" width="100" height="100"/>
+                                        <state key="normal" image="Darth Vader button">
+                                            <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
+                                        </state>
+                                        <connections>
+                                            <action selector="playDarthVaderAudio:" destination="yXg-7A-QXK" eventType="touchUpInside" id="41t-Oc-DZ3"/>
+                                        </connections>
+                                    </button>
                                 </subviews>
                                 <constraints>
                                     <constraint firstAttribute="centerX" secondItem="czO-tt-itu" secondAttribute="centerX" id="IaW-NR-Sb3"/>
+                                    <constraint firstItem="bhk-xA-gqH" firstAttribute="top" secondItem="czO-tt-itu" secondAttribute="bottom" constant="60" id="L7Q-Y7-dwx"/>
+                                    <constraint firstAttribute="centerX" secondItem="bhk-xA-gqH" secondAttribute="centerX" id="Weo-bY-J45"/>
                                 </constraints>
                             </view>
                         </subviews>
@@ -201,6 +223,8 @@
         </scene>
     </scenes>
     <resources>
+        <image name="Chipmunk button" width="100" height="100"/>
+        <image name="Darth Vader button" width="100" height="100"/>
         <image name="Fast button" width="100" height="100"/>
         <image name="Microphone" width="100" height="100"/>
         <image name="Slow button" width="100" height="100"/>
