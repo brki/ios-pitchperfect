@@ -16,11 +16,18 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     @IBOutlet weak var stopButton: UIButton!
     
     var isRecording = false
-    var audioRecorder:AVAudioRecorder!
+    var audioRecorder: AVAudioRecorder!
+    // Directory which will be recreated every time a recording is made, and in which
+    // the recorded audio will be stored:
+    var audioFileDirectoryUrl: NSURL!
     
     override func viewDidLoad() {
-        println("viewDidLoad")
         super.viewDidLoad()
+        
+        audioFileDirectoryUrl = NSURL.fileURLWithPathComponents([
+            NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String,
+            "recordedAudio"
+        ])
         // Do any additional setup after loading the view, typically from a nib.
     }
     
@@ -37,13 +44,9 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         var session = AVAudioSession.sharedInstance()
         session.setCategory(AVAudioSessionCategoryPlayAndRecord, error: nil)
         
-        let filePath = timeStampFilePath()
+        let fileUrl = audioFileUrl()
         
-        if filePath == nil {
-            println("Error: timeStampFilePath() did not return a valid file URL")
-            return
-        }
-        audioRecorder = AVAudioRecorder(URL: filePath!, settings: nil, error: nil)
+        audioRecorder = AVAudioRecorder(URL: fileUrl, settings: nil, error: nil)
         audioRecorder.delegate = self
         audioRecorder.meteringEnabled = true
         audioRecorder.prepareToRecord()
@@ -90,19 +93,34 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         stopButton.hidden = !isRecording
     }
     
-    // Get a file URL for a file in the Document directory.
+    // Get a file URL for a file in a subdirectory of the app's Documents directory.
+    // Every time this method is called, this subdirectory is deleted and recreated.
+    // This avoids keeping files which are never used again.
     // The file name is the current timestamp with millisecond precision, with suffix .wav.
-    func timeStampFilePath() -> NSURL? {
-        let dirPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String
-        
-        let currentDateTime = NSDate()
-        let formatter = NSDateFormatter()
-        formatter.dateFormat = "ddMMyyyy-HHmmss.SSS"
-        let recordingName = formatter.stringFromDate(currentDateTime)+".wav"
-        let pathArray = [dirPath, recordingName]
-        let filePath = NSURL.fileURLWithPathComponents(pathArray)
-        println(filePath)
-        return filePath
+    func audioFileUrl() -> NSURL? {
+        if recreateAudioFileDirectory() {
+            let currentDateTime = NSDate()
+            let formatter = NSDateFormatter()
+            formatter.dateFormat = "ddMMyyyy-HHmmss.SSS"
+            let recordingName = formatter.stringFromDate(currentDateTime)+".wav"
+            let filePath = audioFileDirectoryUrl.URLByAppendingPathComponent(recordingName)
+            return filePath
+        } else {
+            return nil
+        }
+    }
+    
+    func recreateAudioFileDirectory() -> Bool {
+        let fileManager = NSFileManager.defaultManager()
+        // Remove the directory and it's contents if it exists:
+        fileManager.removeItemAtURL(audioFileDirectoryUrl, error: nil)
+        var dirCreationError: NSError?
+        fileManager.createDirectoryAtURL(audioFileDirectoryUrl, withIntermediateDirectories: false, attributes: nil, error: &dirCreationError)
+        if let error = dirCreationError {
+            println("Error creating directory '\(audioFileDirectoryUrl)': \(error.localizedDescription)")
+            return false
+        }
+        return true
     }
 }
 

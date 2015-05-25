@@ -15,9 +15,13 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     @IBOutlet weak var stopPlayButton: UIButton!
     
     var audioEngine: AVAudioEngine?
-    var audioFile: AVAudioFile?
+    // An AVAudioBuffer is used instead of an AVAudioFile so that the completionHandler
+    // of the AVAudioPlayerNode triggers at the correct time.
+    // Reference: http://www.stackoverfliow.com/a/29630124
+    var audioBuffer: AVAudioPCMBuffer?
     var audioPlayer: AVAudioPlayer?
     var receivedAudio: RecordedAudio!
+    var audioSession:AVAudioSession = AVAudioSession.sharedInstance()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,24 +30,25 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         audioPlayer = AVAudioPlayer(contentsOfURL: receivedAudio.filePathUrl, error: &createError)
         if let error = createError {
             println("Error: \(error.localizedDescription)")
-        } else {
-            audioPlayer!.delegate = self
-            audioPlayer!.enableRate = true
+        }
+        
+        if let player = audioPlayer {
+            player.delegate = self
+            player.enableRate = true
             // Pre-load the audio file to minimize delay when play() is called:
-            audioPlayer!.prepareToPlay()
+            player.prepareToPlay()
         }
         
         // Initialize the audioEngine and the file it will use:
         audioEngine = AVAudioEngine()
         if let engine = audioEngine {
-            var fileError: NSError?
-            audioFile = AVAudioFile(forReading: receivedAudio.filePathUrl, error: &fileError)
-            if let error = fileError {
-                println("Error intializing AVAudioFile: \(error.localizedDescription)")
-            }
+            audioBuffer = bufferFromReceivedAudio()
         } else {
             println("Error intializing AVAudioEngine")
         }
+        
+        // Make the audio play out of the bottom speaker.
+        audioSession.setCategory(AVAudioSessionCategoryPlayAndRecord, withOptions: AVAudioSessionCategoryOptions.DefaultToSpeaker, error: nil)
     }
     
     override func viewWillAppear(animated: Bool) {
@@ -72,7 +77,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     }
     
     func playAudioAtPitch(pitch: Float) {
-        if let engine = audioEngine {
+        if let engine = audioEngine, buffer = audioBuffer {
             engine.stop()
             engine.reset()
             let playerNode: AVAudioPlayerNode? = AVAudioPlayerNode()
@@ -81,13 +86,17 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
                 timePitch.pitch = pitch
                 engine.attachNode(playerNode)
                 engine.attachNode(pitchNode)
-                engine.connect(playerNode, to: timePitch, format: nil)
-                engine.connect(pitchNode, to:engine.outputNode, format: nil)
+                engine.connect(playerNode, to: timePitch, format: buffer.format)
+                engine.connect(pitchNode, to:engine.outputNode, format: buffer.format)
                 
-                player.scheduleFile(audioFile, atTime: nil, completionHandler: {
-                    self.stopAudio(nil)
+                player.scheduleBuffer(buffer, atTime: nil, options: nil, completionHandler: {
+                    // Update the user interface on the main thread
+                    dispatch_async(dispatch_get_main_queue(), {
+                        // Do not explicitly stop the audio by calling stopAudio(), because this handler is
+                        // called before the audio has finished playing.  Bug or documentation failure, I guess.
+                        self.stopPlayButton.hidden = true
+                    })
                 })
-                
                 var engineError: NSError?
                 engine.startAndReturnError(&engineError)
                 if let error = engineError {
@@ -99,7 +108,6 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
             }            
         }
     }
-
     
     /// Play sound at provided rate (between 0.5 and 2.0)
     /// and shows the stopPlayButton.
@@ -116,7 +124,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     }
     
     /// Stops the audio from playing and resets the player's currentTime to 0
-    @IBAction func stopAudio(sender: UIButton?) {
+    @IBAction func stopAudio(sender: UIButton) {
         if let player = audioPlayer {
             player.stop()
             player.currentTime = 0
@@ -128,6 +136,24 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         stopPlayButton.hidden = true
     }
     
+    func bufferFromReceivedAudio() -> AVAudioPCMBuffer? {
+        var fileError: NSError?
+        let audioFile = AVAudioFile(forReading: receivedAudio.filePathUrl, commonFormat: AVAudioCommonFormat.PCMFormatFloat32, interleaved: false, error: &fileError)
+        if let error = fileError {
+            println("Error intializing AVAudioFile: \(error.localizedDescription)")
+        }
+        
+        if let file = audioFile {
+            let buffer = AVAudioPCMBuffer(PCMFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length))
+            file.readIntoBuffer(buffer, error: nil)
+            return buffer
+        } else {
+            return nil
+        }
+    }
+    
+    
+    // AVAudioPlayerDelegate method:
     func audioPlayerDidFinishPlaying(player: AVAudioPlayer!, successfully flag: Bool) {
         stopPlayButton.hidden = true
     }
