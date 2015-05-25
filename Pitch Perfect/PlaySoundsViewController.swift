@@ -22,6 +22,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     var audioPlayer: AVAudioPlayer?
     var receivedAudio: RecordedAudio!
     var audioSession:AVAudioSession = AVAudioSession.sharedInstance()
+    var playing: Bool = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -61,25 +62,28 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     }
     
     @IBAction func playSlowSound(sender: UIButton) {
+        stopEngine()
         playSoundAtRate(0.5)
     }
     
     @IBAction func playFastSound(sender: UIButton) {
+        stopEngine()
         playSoundAtRate(2.0)
     }
 
     @IBAction func playChipmunkAudio(sender: UIButton) {
+        stopPlayer()
         playAudioAtPitch(900)
     }
 
     @IBAction func playDarthVaderAudio(sender: UIButton) {
+        stopPlayer()
         playAudioAtPitch(-1000)
     }
     
     func playAudioAtPitch(pitch: Float) {
+        stopEngine()
         if let engine = audioEngine, buffer = audioBuffer {
-            engine.stop()
-            engine.reset()
             let playerNode: AVAudioPlayerNode? = AVAudioPlayerNode()
             let pitchNode: AVAudioUnitTimePitch? = AVAudioUnitTimePitch()
             if let player = playerNode, timePitch = pitchNode {
@@ -88,23 +92,24 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
                 engine.attachNode(pitchNode)
                 engine.connect(playerNode, to: timePitch, format: buffer.format)
                 engine.connect(pitchNode, to:engine.outputNode, format: buffer.format)
-                
-                player.scheduleBuffer(buffer, atTime: nil, options: nil, completionHandler: {
+                player.scheduleBuffer(buffer, atTime: nil, options: AVAudioPlayerNodeBufferOptions.Interrupts, completionHandler: {
+                    self.stopEngine()
                     // Update the user interface on the main thread
                     dispatch_async(dispatch_get_main_queue(), {
-                        // Do not explicitly stop the audio by calling stopAudio(), because this handler is
-                        // called before the audio has finished playing.  Bug or documentation failure, I guess.
-                        self.stopPlayButton.hidden = true
+                        self.stopPlayButton.hidden = !self.playing
                     })
                 })
                 var engineError: NSError?
+                playing = true
                 engine.startAndReturnError(&engineError)
                 if let error = engineError {
+                    playing = false
                     println("Error starting AVAudioEngine: \(error.localizedDescription)")
                     return
                 }
                 player.play()
-                stopPlayButton.hidden = false
+                
+                stopPlayButton.hidden = !playing
             }            
         }
     }
@@ -118,22 +123,35 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
             // a bit choppy, so don't do that.
             if (!player.playing) {
                 player.play()
+                playing = true
             }
-            stopPlayButton.hidden = false
+            stopPlayButton.hidden = !playing
         }
     }
     
-    /// Stops the audio from playing and resets the player's currentTime to 0
+    /// Stops the audio from playing and resets the player
     @IBAction func stopAudio(sender: UIButton) {
+        stopPlayer()
+        stopEngine()
+        stopPlayButton.hidden = !playing
+    }
+    
+    func stopPlayer() {
         if let player = audioPlayer {
             player.stop()
             player.currentTime = 0
         }
+        playing = false
+    }
+    
+    func stopEngine() {
         if let engine = audioEngine {
-            engine.stop()
-            engine.reset()
+            if engine.running {
+                engine.stop()
+                engine.reset()
+            }
         }
-        stopPlayButton.hidden = true
+        playing = false
     }
     
     func bufferFromReceivedAudio() -> AVAudioPCMBuffer? {
@@ -155,7 +173,8 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     
     // AVAudioPlayerDelegate method:
     func audioPlayerDidFinishPlaying(player: AVAudioPlayer!, successfully flag: Bool) {
-        stopPlayButton.hidden = true
+        playing = false
+        stopPlayButton.hidden = !playing
     }
     
     /*
