@@ -81,6 +81,11 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         playAudioAtPitch(-1000)
     }
     
+    // In order of priority, nice-to-have TODOs:
+    // TODO: only use engine, not simple player (will considerably clean up code).
+    // TODO: add a mixer or two, so that the engine can continue playing while effects are changed.
+    // TODO: add echo and reverb effects
+    
     func playAudioAtPitch(pitch: Float) {
         stopEngine()
         if let engine = audioEngine, buffer = audioBuffer {
