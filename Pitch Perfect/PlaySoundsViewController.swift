@@ -128,8 +128,8 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
             // a bit choppy, so don't do that.
             if (!player.playing) {
                 player.play()
-                playing = true
             }
+            playing = true
             stopPlayButton.hidden = !playing
         }
     }
