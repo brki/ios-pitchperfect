@@ -34,7 +34,10 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     override func viewWillAppear(animated: Bool) {
         adjustDisplayForRecordingStatus(recording: false, showRecordingLabel: true)
     }
-    
+
+    /**
+    Record audio, saving a file to the directory ``self.audioFileDirectoryUrl``.
+    */
     @IBAction func recordAudio(sender: UIButton) {
         var session = AVAudioSession.sharedInstance()
         session.setCategory(AVAudioSessionCategoryPlayAndRecord, error: nil)
@@ -72,18 +75,29 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         AVAudioSession.sharedInstance()?.setActive(false, error: nil)
         adjustDisplayForRecordingStatus(recording: true, showRecordingLabel: false)
     }
+
+    /**
+    Adjust the display based on the passed parameters.
     
+    The text of the recording label changes depending on the value of ``isRecording``.
+    
+    :param: recording Is recording currently active?
+    :param: showRecordingLable Should recording label be shown?
+    */
     func adjustDisplayForRecordingStatus(recording isRecording: Bool, showRecordingLabel: Bool=false) {
         recordingLabel.hidden = !showRecordingLabel
         recordingLabel.text = isRecording ? recordingText : waitingToRecordText
         microphone.enabled = !isRecording
         stopButton.hidden = !isRecording
     }
-    
-    // Get a file URL for a file in a subdirectory of the app's Documents directory.
-    // Every time this method is called, this subdirectory is deleted and recreated.
-    // This avoids keeping files which are never used again.
-    // The file name is the current timestamp with millisecond precision, with suffix .wav.
+
+    /**
+    Get a file URL for a file in a subdirectory of the app's Documents directory.
+
+    Every time this method is called, this subdirectory is deleted and recreated.
+    This avoids keeping files which are never used again.
+    The file name is the current timestamp with millisecond precision, with suffix .wav.
+    */
     func audioFileUrl() -> NSURL? {
         if recreateAudioFileDirectory() {
             let currentDateTime = NSDate()
@@ -96,7 +110,10 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             return nil
         }
     }
-    
+
+    /**
+    Delete if present and (re)create the directory that is used for storing the audio file.
+    */
     func recreateAudioFileDirectory() -> Bool {
         let fileManager = NSFileManager.defaultManager()
         // Remove the directory and it's contents if it exists:

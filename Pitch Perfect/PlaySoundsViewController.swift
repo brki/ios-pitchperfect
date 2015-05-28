@@ -117,7 +117,10 @@ class PlaySoundsViewController: UIViewController {
         stopEngine()
         updateStopButton()
     }
-    
+
+    /**
+    Stops the ``audioEngine`` from playing and sets ``self.playing`` to ``false``.
+    */
     func stopEngine() {
         if let engine = audioEngine {
             if engine.running {
@@ -127,11 +130,17 @@ class PlaySoundsViewController: UIViewController {
         }
         playing = false
     }
-    
+
+    /**
+    Toggles the visibility of the stop button based on the current value of ``playing``.
+    */
     func updateStopButton() {
         stopPlayButton.hidden = !playing
     }
 
+    /**
+    Creates an ``AVAudioPCMBuffer`` from the file identified by ``self.receivedAudio.filePathUrl``.
+    */
     func bufferFromReceivedAudio() -> AVAudioPCMBuffer? {
         var fileError: NSError?
         let audioFile = AVAudioFile(forReading: receivedAudio.filePathUrl, commonFormat: AVAudioCommonFormat.PCMFormatFloat32, interleaved: false, error: &fileError)
@@ -147,15 +156,4 @@ class PlaySoundsViewController: UIViewController {
             return nil
         }
     }
-    
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
-
 }
