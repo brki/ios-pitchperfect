@@ -23,7 +23,7 @@
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
                                 <connections>
-                                    <action selector="stopAudio:" destination="yXg-7A-QXK" eventType="touchUpInside" id="lbj-f9-mgf"/>
+                                    <action selector="stopAudio:" destination="yXg-7A-QXK" eventType="touchUpInside" id="nmf-s8-YQf"/>
                                 </connections>
                             </button>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="KLN-dP-MBd" userLabel="left spacer">

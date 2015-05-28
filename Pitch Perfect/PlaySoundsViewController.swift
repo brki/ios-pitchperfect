@@ -19,26 +19,12 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     // of the AVAudioPlayerNode triggers at the correct time.
     // Reference: http://www.stackoverfliow.com/a/29630124
     var audioBuffer: AVAudioPCMBuffer?
-    var audioPlayer: AVAudioPlayer?
     var receivedAudio: RecordedAudio!
     var audioSession:AVAudioSession = AVAudioSession.sharedInstance()
     var playing: Bool = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        var createError: NSError?
-        audioPlayer = AVAudioPlayer(contentsOfURL: receivedAudio.filePathUrl, error: &createError)
-        if let error = createError {
-            println("Error: \(error.localizedDescription)")
-        }
-        
-        if let player = audioPlayer {
-            player.delegate = self
-            player.enableRate = true
-            // Pre-load the audio file to minimize delay when play() is called:
-            player.prepareToPlay()
-        }
         
         // Initialize the audioEngine and the file it will use:
         audioEngine = AVAudioEngine()
@@ -49,7 +35,10 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         }
         
         // Make the audio play out of the bottom speaker.
-        audioSession.setCategory(AVAudioSessionCategoryPlayAndRecord, withOptions: AVAudioSessionCategoryOptions.DefaultToSpeaker, error: nil)
+        audioSession.setCategory(
+            AVAudioSessionCategoryPlayAndRecord,
+            withOptions: AVAudioSessionCategoryOptions.DefaultToSpeaker,
+            error: nil)
     }
     
     override func viewWillAppear(animated: Bool) {
@@ -62,37 +51,45 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     }
     
     @IBAction func playSlowSound(sender: UIButton) {
-        stopEngine()
-        playSoundAtRate(0.5)
+        playAudioAtPitchAndRate(rate: 0.4)
     }
     
     @IBAction func playFastSound(sender: UIButton) {
-        stopEngine()
-        playSoundAtRate(2.0)
+        playAudioAtPitchAndRate(rate: 2.2)
     }
 
     @IBAction func playChipmunkAudio(sender: UIButton) {
-        stopPlayer()
-        playAudioAtPitch(900)
+        playAudioAtPitchAndRate(pitch: 900)
     }
 
     @IBAction func playDarthVaderAudio(sender: UIButton) {
-        stopPlayer()
-        playAudioAtPitch(-1000)
+        playAudioAtPitchAndRate(pitch: -1000)
+    }
+    
+    @IBAction func stopAudio(sender: UIButton) {
+        stopEngine()
+        stopPlayButton.hidden = !playing
     }
     
     // In order of priority, nice-to-have TODOs:
     // TODO: only use engine, not simple player (will considerably clean up code).
     // TODO: add a mixer or two, so that the engine can continue playing while effects are changed.
     // TODO: add echo and reverb effects
+
+    /**
+    Plays audio at the given pitch and/or rate.
     
-    func playAudioAtPitch(pitch: Float) {
+    :param: pitch Float value between -2400 and 2400; default standard pitch is 1.0
+    :param: rate Float value between 1/32 and 32; default standard rate is 1.0
+     */
+    func playAudioAtPitchAndRate(pitch: Float=0, rate: Float=1) {
         stopEngine()
         if let engine = audioEngine, buffer = audioBuffer {
             let playerNode: AVAudioPlayerNode? = AVAudioPlayerNode()
             let pitchNode: AVAudioUnitTimePitch? = AVAudioUnitTimePitch()
             if let player = playerNode, timePitch = pitchNode {
                 timePitch.pitch = pitch
+                timePitch.rate = rate
                 engine.attachNode(playerNode)
                 engine.attachNode(pitchNode)
                 engine.connect(playerNode, to: timePitch, format: buffer.format)
@@ -119,36 +116,6 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         }
     }
     
-    /// Play sound at provided rate (between 0.5 and 2.0)
-    /// and shows the stopPlayButton.
-    func playSoundAtRate(rate: Double) {
-        if let player = audioPlayer {
-            player.rate = Float(rate)
-            // Stopping and starting the player when it's already playing makes the audio
-            // a bit choppy, so don't do that.
-            if (!player.playing) {
-                player.play()
-            }
-            playing = true
-            stopPlayButton.hidden = !playing
-        }
-    }
-    
-    /// Stops the audio from playing and resets the player
-    @IBAction func stopAudio(sender: UIButton) {
-        stopPlayer()
-        stopEngine()
-        stopPlayButton.hidden = !playing
-    }
-    
-    func stopPlayer() {
-        if let player = audioPlayer {
-            player.stop()
-            player.currentTime = 0
-        }
-        playing = false
-    }
-    
     func stopEngine() {
         if let engine = audioEngine {
             if engine.running {
@@ -173,13 +140,6 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         } else {
             return nil
         }
-    }
-    
-    
-    // AVAudioPlayerDelegate method:
-    func audioPlayerDidFinishPlaying(player: AVAudioPlayer!, successfully flag: Bool) {
-        playing = false
-        stopPlayButton.hidden = !playing
     }
     
     /*
