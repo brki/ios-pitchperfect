@@ -59,7 +59,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     }
 
     @IBAction func playChipmunkAudio(sender: UIButton) {
-        playAudioAtPitchAndRate(pitch: 900)
+        playAudioAtPitchAndRate(rate: 1.1, pitch: 900)
     }
 
     @IBAction func playDarthVaderAudio(sender: UIButton) {
@@ -67,12 +67,10 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
     }
     
     @IBAction func stopAudio(sender: UIButton) {
-        stopEngine()
-        stopPlayButton.hidden = !playing
+        stopEngineAndUpdateStopButton()
     }
     
     // In order of priority, nice-to-have TODOs:
-    // TODO: only use engine, not simple player (will considerably clean up code).
     // TODO: add a mixer or two, so that the engine can continue playing while effects are changed.
     // TODO: add echo and reverb effects
 
@@ -98,7 +96,7 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
                     self.stopEngine()
                     // Update the user interface on the main thread
                     dispatch_async(dispatch_get_main_queue(), {
-                        self.stopPlayButton.hidden = !self.playing
+                        self.updateStopButton()
                     })
                 })
                 var engineError: NSError?
@@ -110,10 +108,14 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
                     return
                 }
                 player.play()
-                
-                stopPlayButton.hidden = !playing
-            }            
+            }
         }
+        updateStopButton()
+    }
+
+    func stopEngineAndUpdateStopButton() {
+        stopEngine()
+        updateStopButton()
     }
     
     func stopEngine() {
@@ -126,6 +128,10 @@ class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
         playing = false
     }
     
+    func updateStopButton() {
+        stopPlayButton.hidden = !playing
+    }
+
     func bufferFromReceivedAudio() -> AVAudioPCMBuffer? {
         var fileError: NSError?
         let audioFile = AVAudioFile(forReading: receivedAudio.filePathUrl, commonFormat: AVAudioCommonFormat.PCMFormatFloat32, interleaved: false, error: &fileError)
