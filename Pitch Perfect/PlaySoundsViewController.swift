@@ -10,7 +10,7 @@ import UIKit
 import Foundation
 import AVFoundation
 
-class PlaySoundsViewController: UIViewController, AVAudioPlayerDelegate {
+class PlaySoundsViewController: UIViewController {
 
     @IBOutlet weak var stopPlayButton: UIButton!
     
