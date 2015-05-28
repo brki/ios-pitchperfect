@@ -15,7 +15,6 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     @IBOutlet weak var recordingLabel: UILabel!
     @IBOutlet weak var stopButton: UIButton!
     
-    var isRecording = false
     var audioRecorder: AVAudioRecorder!
     // Directory which will be recreated every time a recording is made, and in which
     // the recorded audio will be stored:
@@ -30,18 +29,12 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String,
             "recordedAudio"
         ])
-        // Do any additional setup after loading the view, typically from a nib.
     }
     
     override func viewWillAppear(animated: Bool) {
-        adjustDisplayForRecordingStatus(showRecordingLabel: true)
+        adjustDisplayForRecordingStatus(recording: false, showRecordingLabel: true)
     }
     
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
-
     @IBAction func recordAudio(sender: UIButton) {
         var session = AVAudioSession.sharedInstance()
         session.setCategory(AVAudioSessionCategoryPlayAndRecord, error: nil)
@@ -54,8 +47,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         audioRecorder.prepareToRecord()
         audioRecorder.record()
         
-        isRecording = true
-        adjustDisplayForRecordingStatus()
+        adjustDisplayForRecordingStatus(recording: true)
     }
     
     func audioRecorderDidFinishRecording(recorder: AVAudioRecorder!, successfully flag: Bool) {
@@ -63,8 +55,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             let recordedAudio = RecordedAudio(title: recorder.url.lastPathComponent!, filePathUrl: recorder.url!)
             performSegueWithIdentifier("fromRecordToPlay", sender: recordedAudio)
         } else {
-            isRecording = false
-            adjustDisplayForRecordingStatus()
+            adjustDisplayForRecordingStatus(recording: false)
         }
     }
 
@@ -78,18 +69,14 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
 
     @IBAction func stopRecording(sender: UIButton) {
         audioRecorder.stop()
-        var audioSession = AVAudioSession.sharedInstance()
-        audioSession.setActive(false, error: nil)
-        
-        isRecording = false
-        adjustDisplayForRecordingStatus(showRecordingLabel: false)
-        
+        AVAudioSession.sharedInstance()?.setActive(false, error: nil)
+        adjustDisplayForRecordingStatus(recording: true, showRecordingLabel: false)
     }
     
-    func adjustDisplayForRecordingStatus(showRecordingLabel: Bool=false) {
-        microphone.enabled = !isRecording
+    func adjustDisplayForRecordingStatus(recording isRecording: Bool, showRecordingLabel: Bool=false) {
         recordingLabel.hidden = !showRecordingLabel
         recordingLabel.text = isRecording ? recordingText : waitingToRecordText
+        microphone.enabled = !isRecording
         stopButton.hidden = !isRecording
     }
     
