@@ -20,6 +20,8 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     // Directory which will be recreated every time a recording is made, and in which
     // the recorded audio will be stored:
     var audioFileDirectoryUrl: NSURL!
+    var recordingText = "Recording"
+    var waitingToRecordText = "Tap to record"
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -32,7 +34,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     }
     
     override func viewWillAppear(animated: Bool) {
-        adjustDisplayForRecordingStatus()
+        adjustDisplayForRecordingStatus(showRecordingLabel: true)
     }
     
     override func didReceiveMemoryWarning() {
@@ -80,13 +82,14 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         audioSession.setActive(false, error: nil)
         
         isRecording = false
-        adjustDisplayForRecordingStatus()
+        adjustDisplayForRecordingStatus(showRecordingLabel: false)
         
     }
     
-    func adjustDisplayForRecordingStatus() {
+    func adjustDisplayForRecordingStatus(showRecordingLabel: Bool=false) {
         microphone.enabled = !isRecording
-        recordingLabel.hidden = !isRecording
+        recordingLabel.hidden = !showRecordingLabel
+        recordingLabel.text = isRecording ? recordingText : waitingToRecordText
         stopButton.hidden = !isRecording
     }
     
