@@ -15,14 +15,19 @@ class PlaySoundsViewController: UIViewController {
     @IBOutlet weak var stopPlayButton: UIButton!
     
     var audioEngine: AVAudioEngine?
+    var playerNode: AVAudioPlayerNode? = AVAudioPlayerNode()
+    var timePitchUnit: AVAudioUnitTimePitch? = AVAudioUnitTimePitch()
+    var reverbUnit: AVAudioUnitReverb? = AVAudioUnitReverb()
+    var echoArray = [AVAudioUnitDelay(), AVAudioUnitDelay(), AVAudioUnitDelay()]
+
     // An AVAudioBuffer is used instead of an AVAudioFile so that the completionHandler
     // of the AVAudioPlayerNode triggers at the correct time.
     // Reference: http://www.stackoverfliow.com/a/29630124
     var audioBuffer: AVAudioPCMBuffer?
     var receivedAudio: RecordedAudio!
-    var audioSession:AVAudioSession = AVAudioSession.sharedInstance()
-    var playing: Bool = false
-    
+    var audioSession: AVAudioSession = AVAudioSession.sharedInstance()
+    var playing = false
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -30,6 +35,7 @@ class PlaySoundsViewController: UIViewController {
         audioEngine = AVAudioEngine()
         if let engine = audioEngine {
             audioBuffer = bufferFromReceivedAudio()
+            setupEngine()
         } else {
             println("Error intializing AVAudioEngine")
         }
@@ -59,20 +65,43 @@ class PlaySoundsViewController: UIViewController {
     }
 
     @IBAction func playChipmunkAudio(sender: UIButton) {
-        playAudioAtPitchAndRate(rate: 1.1, pitch: 900)
+        playAudioAtPitchAndRate(pitch: 900)
     }
 
     @IBAction func playDarthVaderAudio(sender: UIButton) {
         playAudioAtPitchAndRate(pitch: -1000)
     }
     
-    @IBAction func stopAudio(sender: UIButton) {
-        stopEngineAndUpdateStopButton()
+    @IBAction func playReverbAudio(sender: UIButton) {
+        if let engine = audioEngine, player = playerNode, reverb = reverbUnit {
+            if !startEngine(engine) {return}
+            engine.disconnectNodeOutput(player)
+            engine.connect(player, to: reverb, format: nil)
+            reverb.wetDryMix = 50
+            if !playing { startPlayingAudio() }
+        }
+        updateStopButton()
     }
-    
-    // In order of priority, nice-to-have TODOs:
-    // TODO: add a mixer or two, so that the engine can continue playing while effects are changed.
-    // TODO: add echo and reverb effects
+
+    @IBAction func playEchoAudio(sender: UIButton) {
+        if let engine = audioEngine, player = playerNode, reverb = reverbUnit {
+            if !startEngine(engine) {return}
+            engine.disconnectNodeOutput(player)
+            var offset = 0.0
+            for delay in echoArray {
+                delay.delayTime = offset
+                engine.connect(player, to: delay, format:nil)
+                offset += 0.1
+            }
+            if !playing { startPlayingAudio() }
+        }
+        updateStopButton()
+    }
+
+    @IBAction func stopAudio(sender: UIButton) {
+        stopEngine()
+        updateStopButton()
+    }
 
     /**
     Plays audio at the given pitch and/or rate.
@@ -80,42 +109,73 @@ class PlaySoundsViewController: UIViewController {
     :param: pitch Float value between -2400 and 2400; default standard pitch is 1.0
     :param: rate Float value between 1/32 and 32; default standard rate is 1.0
      */
-    func playAudioAtPitchAndRate(pitch: Float=0, rate: Float=1) {
-        stopEngine()
-        if let engine = audioEngine, buffer = audioBuffer {
-            let playerNode: AVAudioPlayerNode? = AVAudioPlayerNode()
-            let pitchNode: AVAudioUnitTimePitch? = AVAudioUnitTimePitch()
-            if let player = playerNode, timePitch = pitchNode {
-                timePitch.pitch = pitch
-                timePitch.rate = rate
-                engine.attachNode(playerNode)
-                engine.attachNode(pitchNode)
-                engine.connect(playerNode, to: timePitch, format: buffer.format)
-                engine.connect(pitchNode, to:engine.outputNode, format: buffer.format)
-                player.scheduleBuffer(buffer, atTime: nil, options: AVAudioPlayerNodeBufferOptions.Interrupts, completionHandler: {
-                    self.stopEngine()
-                    // Update the user interface on the main thread
-                    dispatch_async(dispatch_get_main_queue(), {
-                        self.updateStopButton()
-                    })
-                })
-                var engineError: NSError?
-                playing = true
-                engine.startAndReturnError(&engineError)
-                if let error = engineError {
-                    playing = false
-                    println("Error starting AVAudioEngine: \(error.localizedDescription)")
-                    return
-                }
-                player.play()
-            }
+    func playAudioAtPitchAndRate(pitch: Float=1, rate: Float=1) {
+
+        if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit {
+            if !startEngine(engine) {return}
+            engine.disconnectNodeOutput(player)
+            engine.connect(player, to: timePitch, format: nil)
+            timePitch.pitch = pitch
+            timePitch.rate = rate
+            if !playing { startPlayingAudio() }
         }
         updateStopButton()
     }
 
-    func stopEngineAndUpdateStopButton() {
-        stopEngine()
-        updateStopButton()
+    /**
+    Start the engine if it's not already running.
+    
+    :param: engine
+    */
+    func startEngine(engine: AVAudioEngine) -> Bool{
+        if !engine.running {
+            var engineError: NSError?
+            engine.startAndReturnError(&engineError)
+            if let error = engineError {
+                println("Error starting AVAudioEngine: \(error.localizedDescription)")
+                return false
+            }
+        }
+        return true
+    }
+
+    /**
+    Schedule the audio buffer and start playing.
+    
+    A completion handler is set that will update the playing state and ensure that the stopButton hidden property is updated.
+    */
+    func startPlayingAudio() {
+        if let engine = audioEngine, player = playerNode, buffer = audioBuffer {
+
+            player.scheduleBuffer(buffer, atTime: nil, options: AVAudioPlayerNodeBufferOptions.Interrupts, completionHandler: {
+                self.playing = false
+                // Update the user interface on the main thread
+                dispatch_async(dispatch_get_main_queue(), {
+                    self.updateStopButton()
+                })
+            })
+
+            player.play()
+            playing = true
+        }
+    }
+
+    /**
+    Do the initial engine setup - attach nodes and connect the audio effect nodes to the mixer.
+    */
+    func setupEngine() {
+        if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit, reverb = reverbUnit {
+            engine.attachNode(player)
+            engine.attachNode(timePitch)
+            engine.attachNode(reverb)
+            engine.mainMixerNode
+            engine.connect(timePitch, to: engine.mainMixerNode, fromBus: 0, toBus: 0, format: nil)
+            engine.connect(reverb, to: engine.mainMixerNode, fromBus: 0, toBus: 1, format: nil)
+            for delay in echoArray {
+                engine.attachNode(delay)
+                engine.connect(delay, to: engine.mainMixerNode, fromBus:0, toBus: engine.mainMixerNode.nextAvailableInputBus, format:nil)
+            }
+        }
     }
 
     /**
