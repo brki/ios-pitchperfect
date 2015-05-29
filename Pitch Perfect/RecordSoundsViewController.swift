@@ -84,7 +84,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     :param: recording Is recording currently active?
     :param: showRecordingLable Should recording label be shown?
     */
-    func adjustDisplayForRecordingStatus(recording isRecording: Bool, showRecordingLabel: Bool=false) {
+    func adjustDisplayForRecordingStatus(recording isRecording: Bool, showRecordingLabel: Bool=true) {
         recordingLabel.hidden = !showRecordingLabel
         recordingLabel.text = isRecording ? recordingText : waitingToRecordText
         microphone.enabled = !isRecording
