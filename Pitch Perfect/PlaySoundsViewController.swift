@@ -74,28 +74,24 @@ class PlaySoundsViewController: UIViewController {
     
     @IBAction func playReverbAudio(sender: UIButton) {
         if let engine = audioEngine, player = playerNode, reverb = reverbUnit {
-            if !startEngine(engine) {return}
-            engine.disconnectNodeOutput(player)
-            engine.connect(player, to: reverb, format: nil)
-            reverb.wetDryMix = 50
-            if !playing { startPlayingAudio() }
+            playAudioWithEffect({
+                engine.connect(player, to: reverb, format: nil)
+                reverb.wetDryMix = 50
+            })
         }
-        updateStopButton()
     }
 
     @IBAction func playEchoAudio(sender: UIButton) {
         if let engine = audioEngine, player = playerNode, reverb = reverbUnit {
-            if !startEngine(engine) {return}
-            engine.disconnectNodeOutput(player)
-            var offset = 0.0
-            for delay in echoArray {
-                delay.delayTime = offset
-                engine.connect(player, to: delay, format:nil)
-                offset += 0.1
-            }
-            if !playing { startPlayingAudio() }
+            playAudioWithEffect({
+                var offset = 0.0
+                for delay in self.echoArray {
+                    delay.delayTime = offset
+                    engine.connect(player, to: delay, format:nil)
+                    offset += 0.1
+                }
+            })
         }
-        updateStopButton()
     }
 
     @IBAction func stopAudio(sender: UIButton) {
@@ -110,13 +106,30 @@ class PlaySoundsViewController: UIViewController {
     :param: rate Float value between 1/32 and 32; default standard rate is 1.0
      */
     func playAudioAtPitchAndRate(pitch: Float=1, rate: Float=1) {
-
         if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit {
+            playAudioWithEffect({
+                engine.connect(player, to: timePitch, format: nil)
+                timePitch.pitch = pitch
+                timePitch.rate = rate
+            })
+        }
+    }
+
+    /**
+    Plays the given effect.
+    
+    This method handles some common logic: ensuring that the engine is running, disconnecting the player
+    from any effect nodes it was previously connected to, starts the player playing after running
+    the code in the ``effect`` closure, and updating the hidden property of the stop button.
+    
+    :param: effect closure that connects the player to the desired effect nodes, and configures the effect nodes.
+
+    */
+    func playAudioWithEffect(effect: () -> Void) {
+        if let engine = audioEngine, player = playerNode {
             if !startEngine(engine) {return}
             engine.disconnectNodeOutput(player)
-            engine.connect(player, to: timePitch, format: nil)
-            timePitch.pitch = pitch
-            timePitch.rate = rate
+            effect()
             if !playing { startPlayingAudio() }
         }
         updateStopButton()
