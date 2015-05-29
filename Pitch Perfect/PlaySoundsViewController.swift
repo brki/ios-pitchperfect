@@ -15,13 +15,20 @@ class PlaySoundsViewController: UIViewController {
     @IBOutlet weak var stopPlayButton: UIButton!
     
     var audioEngine: AVAudioEngine?
+    var playerNode: AVAudioPlayerNode? = AVAudioPlayerNode()
+    var timePitchUnit: AVAudioUnitTimePitch? = AVAudioUnitTimePitch()
+    var reverbUnit: AVAudioUnitReverb? = AVAudioUnitReverb()
+
     // An AVAudioBuffer is used instead of an AVAudioFile so that the completionHandler
     // of the AVAudioPlayerNode triggers at the correct time.
     // Reference: http://www.stackoverfliow.com/a/29630124
     var audioBuffer: AVAudioPCMBuffer?
     var receivedAudio: RecordedAudio!
-    var audioSession:AVAudioSession = AVAudioSession.sharedInstance()
-    var playing: Bool = false
+    var audioSession: AVAudioSession = AVAudioSession.sharedInstance()
+    var playing = false
+    var interrupted = false
+    var sampleRate: Double = 0
+    var duration: Double = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -30,6 +37,7 @@ class PlaySoundsViewController: UIViewController {
         audioEngine = AVAudioEngine()
         if let engine = audioEngine {
             audioBuffer = bufferFromReceivedAudio()
+            setupEngine()
         } else {
             println("Error intializing AVAudioEngine")
         }
@@ -59,7 +67,7 @@ class PlaySoundsViewController: UIViewController {
     }
 
     @IBAction func playChipmunkAudio(sender: UIButton) {
-        playAudioAtPitchAndRate(rate: 1.1, pitch: 900)
+        playAudioAtPitchAndRate(pitch: 900)
     }
 
     @IBAction func playDarthVaderAudio(sender: UIButton) {
@@ -80,37 +88,79 @@ class PlaySoundsViewController: UIViewController {
     :param: pitch Float value between -2400 and 2400; default standard pitch is 1.0
     :param: rate Float value between 1/32 and 32; default standard rate is 1.0
      */
-    func playAudioAtPitchAndRate(pitch: Float=0, rate: Float=1) {
-        stopEngine()
-        if let engine = audioEngine, buffer = audioBuffer {
-            let playerNode: AVAudioPlayerNode? = AVAudioPlayerNode()
-            let pitchNode: AVAudioUnitTimePitch? = AVAudioUnitTimePitch()
-            if let player = playerNode, timePitch = pitchNode {
-                timePitch.pitch = pitch
-                timePitch.rate = rate
-                engine.attachNode(playerNode)
-                engine.attachNode(pitchNode)
-                engine.connect(playerNode, to: timePitch, format: buffer.format)
-                engine.connect(pitchNode, to:engine.outputNode, format: buffer.format)
-                player.scheduleBuffer(buffer, atTime: nil, options: AVAudioPlayerNodeBufferOptions.Interrupts, completionHandler: {
-                    self.stopEngine()
-                    // Update the user interface on the main thread
-                    dispatch_async(dispatch_get_main_queue(), {
-                        self.updateStopButton()
-                    })
-                })
+    func playAudioAtPitchAndRate(pitch: Float=1, rate: Float=1) {
+
+        if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit {
+            if !engine.running {
                 var engineError: NSError?
-                playing = true
                 engine.startAndReturnError(&engineError)
                 if let error = engineError {
-                    playing = false
                     println("Error starting AVAudioEngine: \(error.localizedDescription)")
                     return
                 }
-                player.play()
             }
+            interrupted = true
+            if playing {
+                if let playerTime = player.playerTimeForNodeTime(player.lastRenderTime) {
+                    let position = Double(playerTime.sampleTime) / sampleRate
+                    let newSampleTime = AVAudioFramePosition(sampleRate * position)
+                    var length = Double(duration) - position
+                    var framestoplay = AVAudioFrameCount(Double(playerTime.sampleRate) * length)
+                    //TODO: read https://github.com/danielmj/AEAudioPlayer/issues/1
+                    //TODO: perhaps simply use file instead of buffer, so can use scheduleSegment.  in completionhandler,
+                    //      find out how much time is left before end of audio, and schedule a stop for that time.
+                    //TODO: or, just give up on this, and let the audio restart each time a button it tapped.
+                    player.scheduleSegment(audioFile, startingFrame: newsampletime, frameCount: framestoplay, atTime: nil,completionHandler: nil)
+                    println("position: \(position)")
+                }
+            }
+            engine.disconnectNodeOutput(player)
+            engine.connect(player, to: timePitch, format: nil)
+            timePitch.pitch = pitch
+            timePitch.rate = rate
+            println("playing in playAudioAtPitch...: \(player.playing)")
+            println("lastRenderTime:in playAudioAtPitch...: \(player.lastRenderTime)")
+            if !playing { startPlayingAudio() }
+            interrupted = false
         }
         updateStopButton()
+    }
+
+    func startPlayingAudio() {
+        if let engine = audioEngine, player = playerNode, buffer = audioBuffer {
+
+            player.scheduleBuffer(buffer, atTime: nil, options: AVAudioPlayerNodeBufferOptions.Interrupts, completionHandler: {
+
+                //TODO: how to differentiate between end-of-file reached and was-interrupted?
+//                self.playing = false
+                // Update the user interface on the main thread
+//                engine.disconnectNodeOutput(player)
+
+
+                println("\(player.nodeTimeForPlayerTime(player.lastRenderTime))")
+                println("\(player.playerTimeForNodeTime(player.lastRenderTime))")
+                dispatch_async(dispatch_get_main_queue(), {
+                    println("lastRenderTime: \(player.lastRenderTime)")
+                    println("playing: \(player.playing)")
+                    println("interrrupted \(self.interrupted)")
+                    self.updateStopButton()
+                })
+            })
+
+            player.play()
+            playing = true
+        }
+    }
+
+    func setupEngine() {
+        if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit, reverb = reverbUnit {
+            engine.attachNode(player)
+            engine.attachNode(timePitch)
+            engine.attachNode(reverb)
+            engine.connect(timePitch, to: engine.mainMixerNode, fromBus: 0, toBus: 0, format: nil)
+            engine.connect(reverb, to: engine.mainMixerNode, fromBus: 0, toBus: 1, format: nil)
+
+        }
     }
 
     func stopEngineAndUpdateStopButton() {
@@ -151,6 +201,8 @@ class PlaySoundsViewController: UIViewController {
         if let file = audioFile {
             let buffer = AVAudioPCMBuffer(PCMFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length))
             file.readIntoBuffer(buffer, error: nil)
+            self.sampleRate = buffer.format.sampleRate
+            self.duration = Double(file.length) / self.sampleRate
             return buffer
         } else {
             return nil
