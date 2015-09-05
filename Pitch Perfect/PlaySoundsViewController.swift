@@ -106,14 +106,14 @@ class PlaySoundsViewController: UIViewController {
     :param: rate Float value between 1/32 and 32; default standard rate is 1.0
      */
     func playAudioAtPitchAndRate(pitch: Float=1, rate: Float=1) {
-        if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit {
-            playAudioWithEffect({
-                engine.connect(player, to: timePitch, format: nil)
-                timePitch.pitch = pitch
-                timePitch.rate = rate
-            })
-        }
-    }
+		if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit, buffer = audioBuffer {
+			playAudioWithEffect({
+				engine.connect(player, to: timePitch, format: buffer.format)
+				timePitch.pitch = pitch
+				timePitch.rate = rate
+			})
+		}
+	}
 
     /**
     Plays the given effect.
@@ -157,39 +157,40 @@ class PlaySoundsViewController: UIViewController {
     
     A completion handler is set that will update the playing state and ensure that the stopButton hidden property is updated.
     */
-    func startPlayingAudio() {
-        if let engine = audioEngine, player = playerNode, buffer = audioBuffer {
+	func startPlayingAudio() {
+		if let engine = audioEngine, player = playerNode, buffer = audioBuffer {
 
-            player.scheduleBuffer(buffer, atTime: nil, options: AVAudioPlayerNodeBufferOptions.Interrupts, completionHandler: {
-                self.playing = false
-                // Update the user interface on the main thread
-                dispatch_async(dispatch_get_main_queue(), {
-                    self.updateStopButton()
-                })
-            })
+			player.scheduleBuffer(buffer, atTime: nil, options: AVAudioPlayerNodeBufferOptions.Interrupts, completionHandler: {
+				self.playing = false
+				// Update the user interface on the main thread
+				dispatch_async(dispatch_get_main_queue(), {
+					self.updateStopButton()
+				})
+			})
 
-            player.play()
-            playing = true
-        }
-    }
+			player.play()
+			playing = true
+		}
+	}
 
     /**
     Do the initial engine setup - attach nodes and connect the audio effect nodes to the mixer.
     */
-    func setupEngine() {
-        if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit, reverb = reverbUnit {
-            engine.attachNode(player)
-            engine.attachNode(timePitch)
-            engine.attachNode(reverb)
-            engine.mainMixerNode
-            engine.connect(timePitch, to: engine.mainMixerNode, fromBus: 0, toBus: 0, format: nil)
-            engine.connect(reverb, to: engine.mainMixerNode, fromBus: 0, toBus: 1, format: nil)
-            for delay in echoArray {
-                engine.attachNode(delay)
-                engine.connect(delay, to: engine.mainMixerNode, fromBus:0, toBus: engine.mainMixerNode.nextAvailableInputBus, format:nil)
-            }
-        }
-    }
+	func setupEngine() {
+		if let engine = audioEngine, player = playerNode, timePitch = timePitchUnit, reverb = reverbUnit, buffer = audioBuffer {
+			engine.attachNode(player)
+			engine.attachNode(timePitch)
+			engine.attachNode(reverb)
+			engine.mainMixerNode
+			engine.connect(timePitch, to: engine.mainMixerNode, fromBus: 0, toBus: 0, format: buffer.format)
+			engine.connect(reverb, to: engine.mainMixerNode, fromBus: 0, toBus: 1, format: buffer.format)
+			for delay in echoArray {
+				engine.attachNode(delay)
+				engine.connect(delay, to: engine.mainMixerNode, fromBus:0, toBus: engine.mainMixerNode.nextAvailableInputBus, format:buffer.format)
+			}
+			engine.connect(engine.mainMixerNode, to:engine.outputNode, format:buffer.format)
+		}
+	}
 
     /**
     Stops the ``audioEngine`` from playing and sets ``self.playing`` to ``false``.
